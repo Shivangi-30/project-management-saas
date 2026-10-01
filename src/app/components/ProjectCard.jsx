@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -10,7 +9,6 @@ export default function ProjectCard({
 }) {
   return (
     <div className="rounded-xl border bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
-      
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-lg font-semibold text-slate-800">
@@ -33,17 +31,20 @@ export default function ProjectCard({
         </span>
 
         <div className="flex items-center gap-3">
-          <button className="text-sm font-medium text-blue-600 hover:text-blue-800">
-            <Link href={`/projects/${project.id}`}>
-  View Project
-</Link>
+          <Link
+            href={`/projects/${project.id}`}
+            className="text-sm font-medium text-blue-600 hover:text-blue-800"
+          >
+            View Project
+          </Link>
+
+          <button
+            onClick={() => onEdit(project)}
+            className="text-sm font-medium text-blue-600 hover:text-blue-800"
+          >
+            Edit
           </button>
-<button
-  onClick={() => onEdit(project)}
-  className="text-sm font-medium text-blue-600 hover:text-blue-800"
->
-  Edit
-</button>
+
           <button
             onClick={() => onDelete(project.id)}
             className="text-sm font-medium text-red-600 hover:text-red-800"
@@ -52,8 +53,6 @@ export default function ProjectCard({
           </button>
         </div>
       </div>
-
     </div>
   );
 }
-
