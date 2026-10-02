@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 export default function RegisterPage() {
@@ -8,127 +9,157 @@ export default function RegisterPage() {
     email: "",
     password: "",
   });
-  const [error, setError] = useState("");
+
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   function handleChange(event) {
     const { name, value } = event.target;
 
-    setFormData({
-      ...formData,
+    setFormData((previousData) => ({
+      ...previousData,
       [name]: value,
-    });
+    }));
   }
 
-function handleSubmit(event) {
-  event.preventDefault();
+  async function handleSubmit(event) {
+    event.preventDefault();
 
-  setError("");
+    setMessage("");
+    setLoading(true);
 
-  if (!formData.name.trim()) {
-    setError("Name is required");
-    return;
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setMessage("Registration successful!");
+        
+        setFormData({
+          name: "",
+          email: "",
+          password: "",
+        });
+      } else {
+        setMessage(data.message);
+      }
+    } catch (error) {
+      console.error("Register Error:", error);
+      setMessage("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
-  if (!formData.email.trim()) {
-    setError("Email is required");
-    return;
-  }
-
-  if (!formData.password) {
-    setError("Password is required");
-    return;
-  }
-
-  if (formData.password.length < 6) {
-    setError("Password must be at least 6 characters");
-    return;
-  }
-
-  console.log(formData);
-}
-async function handleSubmit(event) {
-  event.preventDefault();
-
-  setError("");
-
-  if (!formData.name.trim()) {
-    setError("Name is required");
-    return;
-  }
-
-  if (!formData.email.trim()) {
-    setError("Email is required");
-    return;
-  }
-
-  if (!formData.password) {
-    setError("Password is required");
-    return;
-  }
-
-  if (formData.password.length < 6) {
-    setError("Password must be at least 6 characters");
-    return;
-  }
-
-  const response = await fetch("/api/auth/register", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(formData),
-  });
-
-const data = await response.json();
-
-if (!response.ok) {
-  setError(data.message);
-  return;
-}
-
-console.log(data);
   return (
-    <main>
-      <h1>Create Account</h1>
+    <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
+      <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg">
 
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Name</label>
-
-          <input
-            type="text"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div>
-          <label>Email</label>
-
-          <input
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div>
-          <label>Password</label>
-
-          <input
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-          />
-        </div>
-
-        <button type="submit">
+        <h1 className="mb-2 text-center text-3xl font-bold text-slate-900">
           Create Account
-        </button>
-      </form>
+        </h1>
+
+        <p className="mb-6 text-center text-slate-500">
+          Register for your project management account
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+
+          <div>
+            <label
+              htmlFor="name"
+              className="mb-2 block text-sm font-medium text-slate-700"
+            >
+              Name
+            </label>
+
+            <input
+              id="name"
+              name="name"
+              type="text"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Enter your name"
+              required
+              className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="email"
+              className="mb-2 block text-sm font-medium text-slate-700"
+            >
+              Email
+            </label>
+
+            <input
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="Enter your email"
+              required
+              className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="password"
+              className="mb-2 block text-sm font-medium text-slate-700"
+            >
+              Password
+            </label>
+
+            <input
+              id="password"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="Enter your password"
+              required
+              minLength={6}
+              className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading ? "Creating Account..." : "Register"}
+          </button>
+
+        </form>
+
+        {message && (
+          <p className="mt-5 text-center text-sm font-medium text-slate-700">
+            {message}
+          </p>
+        )}
+
+        <p className="mt-6 text-center text-sm text-slate-500">
+          Already have an account?{" "}
+          <Link
+            href="/auth/login"
+            className="font-semibold text-blue-600 hover:underline"
+          >
+            Login
+          </Link>
+        </p>
+
+      </div>
     </main>
   );
 }
