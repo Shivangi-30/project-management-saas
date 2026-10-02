@@ -9,52 +9,53 @@ export async function POST(request) {
 
     const body = await request.json();
 
-    const { name, email, password } = body;
+    const { email, password } = body;
 
-    if (!name || !email || !password) {
+    // Check required fields
+    if (!email || !password) {
       return NextResponse.json(
         {
           success: false,
-          message: "Name, email and password are required",
+          message: "Email and password are required",
         },
         { status: 400 }
       );
     }
 
-    if (password.length < 6) {
+    // Find user by email
+    const user = await User.findOne({ email });
+
+    if (!user) {
       return NextResponse.json(
         {
           success: false,
-          message: "Password must be at least 6 characters",
+          message: "Invalid email or password",
         },
-        { status: 400 }
+        { status: 401 }
       );
     }
 
-    const existingUser = await User.findOne({ email });
+    // Compare password with hashed password
+    const isPasswordCorrect = await bcrypt.compare(
+      password,
+      user.password
+    );
 
-    if (existingUser) {
+    if (!isPasswordCorrect) {
       return NextResponse.json(
         {
           success: false,
-          message: "User already exists",
+          message: "Invalid email or password",
         },
-        { status: 409 }
+        { status: 401 }
       );
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-    });
-
+    // Login successful
     return NextResponse.json(
       {
         success: true,
-        message: "User registered successfully",
+        message: "Login successful",
         user: {
           id: user._id,
           name: user.name,
@@ -62,15 +63,15 @@ export async function POST(request) {
           role: user.role,
         },
       },
-      { status: 201 }
+      { status: 200 }
     );
   } catch (error) {
-    console.error("Register Error:", error);
+    console.error("Login Error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        message: "Registration failed",
+        message: "Login failed",
       },
       { status: 500 }
     );
