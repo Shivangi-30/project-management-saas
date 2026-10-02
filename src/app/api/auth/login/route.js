@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import connectDB from "@/lib/mongodb";
 import User from "@/models/User";
+import { createToken } from "@/lib/auth";
 
 export async function POST(request) {
   try {
@@ -11,7 +12,6 @@ export async function POST(request) {
 
     const { email, password } = body;
 
-    // Check required fields
     if (!email || !password) {
       return NextResponse.json(
         {
@@ -22,7 +22,6 @@ export async function POST(request) {
       );
     }
 
-    // Find user by email
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -35,7 +34,6 @@ export async function POST(request) {
       );
     }
 
-    // Compare password with hashed password
     const isPasswordCorrect = await bcrypt.compare(
       password,
       user.password
@@ -51,8 +49,9 @@ export async function POST(request) {
       );
     }
 
-    // Login successful
-    return NextResponse.json(
+    const token = createToken(user);
+
+    const response = NextResponse.json(
       {
         success: true,
         message: "Login successful",
@@ -65,6 +64,16 @@ export async function POST(request) {
       },
       { status: 200 }
     );
+
+    response.cookies.set("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7,
+      path: "/",
+    });
+
+    return response;
   } catch (error) {
     console.error("Login Error:", error);
 
