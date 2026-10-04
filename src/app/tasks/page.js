@@ -1,47 +1,353 @@
 "use client";
 
-import { useState } from "react";
-
-import { useAppContext } from "../../context/AppContext";
+import { useEffect, useState } from "react";
 
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 
 export default function TasksPage() {
-  const { tasks, setTasks } = useAppContext();
+  const [tasks, setTasks] = useState([]);
+  const [projects, setProjects] = useState([]);
 
+  // Add Task fields
   const [taskTitle, setTaskTitle] = useState("");
+  const [projectId, setProjectId] = useState("");
 
-  const addTask = () => {
-    if (taskTitle.trim() === "") return;
+  // Edit Task fields
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editProjectId, setEditProjectId] = useState("");
+  const [editStatus, setEditStatus] = useState("Pending");
+  const [editPriority, setEditPriority] = useState("Medium");
+  const [editDueDate, setEditDueDate] = useState("");
 
-    const newTask = {
-      id: Date.now(),
-      title: taskTitle,
-      status: "Pending",
-    };
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [updatingId, setUpdatingId] = useState(null);
 
-    setTasks([...tasks, newTask]);
-    setTaskTitle("");
+  const [error, setError] = useState("");
+
+  // Fetch Projects and Tasks
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const [projectsResponse, tasksResponse] =
+          await Promise.all([
+            fetch("/api/projects"),
+            fetch("/api/tasks"),
+          ]);
+
+        const projectsData = await projectsResponse.json();
+        const tasksData = await tasksResponse.json();
+
+        if (!projectsResponse.ok) {
+          throw new Error(
+            projectsData.message || "Failed to fetch projects"
+          );
+        }
+
+        if (!tasksResponse.ok) {
+          throw new Error(
+            tasksData.message || "Failed to fetch tasks"
+          );
+        }
+
+        const formattedProjects = projectsData.projects.map(
+          (project) => ({
+            ...project,
+            id: project._id,
+          })
+        );
+
+        const formattedTasks = tasksData.tasks.map((task) => ({
+          ...task,
+          id: task._id,
+        }));
+
+        setProjects(formattedProjects);
+        setTasks(formattedTasks);
+      } catch (error) {
+        console.error("Fetch Tasks Data Error:", error);
+
+        setError(
+          error.message || "Failed to load tasks"
+        );
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  // Add Task
+  const addTask = async () => {
+    if (taskTitle.trim() === "") {
+      setError("Task title is required.");
+      return;
+    }
+
+    if (!projectId) {
+      setError("Please select a project.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError("");
+
+      const response = await fetch("/api/tasks", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectId,
+          title: taskTitle,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to create task"
+        );
+      }
+
+      const newTask = {
+        ...data.task,
+        id: data.task._id,
+      };
+
+      setTasks((currentTasks) => [
+        newTask,
+        ...currentTasks,
+      ]);
+
+      setTaskTitle("");
+      setProjectId("");
+    } catch (error) {
+      console.error("Add Task Error:", error);
+
+      setError(
+        error.message || "Failed to create task"
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const deleteTask = (id) => {
-    setTasks(
-      tasks.filter((task) => task.id !== id)
+  // Delete Task
+  const deleteTask = async (id) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this task?"
     );
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingId(id);
+      setError("");
+
+      const response = await fetch(`/api/tasks/${id}`, {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to delete task"
+        );
+      }
+
+      setTasks((currentTasks) =>
+        currentTasks.filter((task) => task.id !== id)
+      );
+    } catch (error) {
+      console.error("Delete Task Error:", error);
+
+      setError(
+        error.message || "Failed to delete task"
+      );
+    } finally {
+      setDeletingId(null);
+    }
   };
 
-  const updateTaskStatus = (id, newStatus) => {
-    setTasks(
-      tasks.map((task) =>
-        task.id === id
-          ? {
-              ...task,
-              status: newStatus,
-            }
-          : task
-      )
+  // Start Edit Task
+  const startEditTask = (task) => {
+    setEditingTaskId(task.id);
+
+    setEditTitle(task.title || "");
+    setEditDescription(task.description || "");
+
+    setEditProjectId(
+      task.projectId?._id || task.projectId || ""
     );
+
+    setEditStatus(task.status || "Pending");
+    setEditPriority(task.priority || "Medium");
+
+    if (task.dueDate) {
+      setEditDueDate(
+        new Date(task.dueDate)
+          .toISOString()
+          .split("T")[0]
+      );
+    } else {
+      setEditDueDate("");
+    }
+
+    setError("");
+  };
+
+  // Cancel Edit
+  const cancelEditTask = () => {
+    setEditingTaskId(null);
+
+    setEditTitle("");
+    setEditDescription("");
+    setEditProjectId("");
+    setEditStatus("Pending");
+    setEditPriority("Medium");
+    setEditDueDate("");
+
+    setError("");
+  };
+
+  // Update Full Task
+  const updateTask = async () => {
+    if (editTitle.trim() === "") {
+      setError("Task title is required.");
+      return;
+    }
+
+    if (!editProjectId) {
+      setError("Please select a project.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError("");
+
+      const response = await fetch(
+        `/api/tasks/${editingTaskId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            projectId: editProjectId,
+            title: editTitle,
+            description: editDescription,
+            status: editStatus,
+            priority: editPriority,
+            dueDate: editDueDate || null,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to update task"
+        );
+      }
+
+      const updatedTask = {
+        ...data.task,
+        id: data.task._id,
+      };
+
+      setTasks((currentTasks) =>
+        currentTasks.map((task) =>
+          task.id === editingTaskId
+            ? updatedTask
+            : task
+        )
+      );
+
+      cancelEditTask();
+    } catch (error) {
+      console.error("Update Task Error:", error);
+
+      setError(
+        error.message || "Failed to update task"
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Update Task Status
+  const updateTaskStatus = async (task, newStatus) => {
+    try {
+      setUpdatingId(task.id);
+      setError("");
+
+      const response = await fetch(
+        `/api/tasks/${task.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            projectId:
+              task.projectId?._id || task.projectId,
+
+            title: task.title,
+
+            description: task.description || "",
+
+            status: newStatus,
+
+            priority: task.priority || "Medium",
+
+            dueDate: task.dueDate || null,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to update task"
+        );
+      }
+
+      const updatedTask = {
+        ...data.task,
+        id: data.task._id,
+      };
+
+      setTasks((currentTasks) =>
+        currentTasks.map((currentTask) =>
+          currentTask.id === task.id
+            ? updatedTask
+            : currentTask
+        )
+      );
+    } catch (error) {
+      console.error("Update Task Error:", error);
+
+      setError(
+        error.message || "Failed to update task"
+      );
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   return (
@@ -65,14 +371,49 @@ export default function TasksPage() {
             </p>
           </div>
 
+          {/* Error Message */}
+
+          {error && (
+            <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              {error}
+            </div>
+          )}
+
           {/* Add Task */}
 
           <div className="mb-6 rounded-xl border bg-white p-5 shadow-sm">
+
             <h2 className="mb-4 text-lg font-semibold text-slate-800">
               Add New Task
             </h2>
 
-            <div className="flex gap-4">
+            <div className="flex flex-col gap-4 md:flex-row">
+
+              {/* Project Select */}
+
+              <select
+                value={projectId}
+                onChange={(e) =>
+                  setProjectId(e.target.value)
+                }
+                className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="">
+                  Select Project
+                </option>
+
+                {projects.map((project) => (
+                  <option
+                    key={project.id}
+                    value={project.id}
+                  >
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Task Title */}
+
               <input
                 type="text"
                 placeholder="Enter task title"
@@ -83,19 +424,45 @@ export default function TasksPage() {
                 className="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
 
+              {/* Add Button */}
+
               <button
+                type="button"
                 onClick={addTask}
-                className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+                disabled={
+                  saving || projects.length === 0
+                }
+                className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Add Task
+                {saving ? "Adding..." : "Add Task"}
               </button>
+
             </div>
+
+            {projects.length === 0 && !loading && (
+              <p className="mt-3 text-sm text-amber-600">
+                Please create a project first before
+                adding a task.
+              </p>
+            )}
+
           </div>
 
-          {/* Tasks List */}
+          {/* Loading */}
 
-          {tasks.length === 0 ? (
+          {loading ? (
             <div className="rounded-xl border bg-white p-10 text-center shadow-sm">
+              <p className="text-sm text-slate-500">
+                Loading tasks...
+              </p>
+            </div>
+
+          ) : tasks.length === 0 ? (
+
+            /* No Tasks */
+
+            <div className="rounded-xl border bg-white p-10 text-center shadow-sm">
+
               <h2 className="text-lg font-semibold text-slate-800">
                 No Tasks Found
               </h2>
@@ -103,68 +470,328 @@ export default function TasksPage() {
               <p className="mt-2 text-sm text-slate-500">
                 Add your first task above.
               </p>
+
             </div>
+
           ) : (
+
+            /* Tasks List */
+
             <div className="space-y-4">
+
               {tasks.map((task) => (
+
                 <div
                   key={task.id}
                   className="rounded-xl border bg-white p-5 shadow-sm transition hover:shadow-md"
                 >
-                  <div className="flex items-center justify-between gap-4">
 
-                    {/* Task Information */}
+                  {editingTaskId === task.id ? (
+
+                    /* Edit Task Form */
 
                     <div>
-                      <h3 className="text-base font-semibold text-slate-800">
-                        {task.title}
+
+                      <h3 className="mb-5 text-lg font-semibold text-slate-800">
+                        Edit Task
                       </h3>
 
-                      <p className="mt-1 text-sm text-slate-500">
-                        Task ID: {task.id}
-                      </p>
+                      <div className="grid gap-4 md:grid-cols-2">
+
+                        {/* Title */}
+
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">
+                            Task Title
+                          </label>
+
+                          <input
+                            type="text"
+                            value={editTitle}
+                            onChange={(e) =>
+                              setEditTitle(
+                                e.target.value
+                              )
+                            }
+                            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                          />
+                        </div>
+
+                        {/* Project */}
+
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">
+                            Project
+                          </label>
+
+                          <select
+                            value={editProjectId}
+                            onChange={(e) =>
+                              setEditProjectId(
+                                e.target.value
+                              )
+                            }
+                            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                          >
+                            <option value="">
+                              Select Project
+                            </option>
+
+                            {projects.map((project) => (
+                              <option
+                                key={project.id}
+                                value={project.id}
+                              >
+                                {project.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Description */}
+
+                        <div className="md:col-span-2">
+                          <label className="mb-1 block text-sm font-medium text-slate-700">
+                            Description
+                          </label>
+
+                          <textarea
+                            rows="3"
+                            value={editDescription}
+                            onChange={(e) =>
+                              setEditDescription(
+                                e.target.value
+                              )
+                            }
+                            placeholder="Enter task description"
+                            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                          />
+                        </div>
+
+                        {/* Status */}
+
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">
+                            Status
+                          </label>
+
+                          <select
+                            value={editStatus}
+                            onChange={(e) =>
+                              setEditStatus(
+                                e.target.value
+                              )
+                            }
+                            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                          >
+                            <option value="Pending">
+                              Pending
+                            </option>
+
+                            <option value="In Progress">
+                              In Progress
+                            </option>
+
+                            <option value="Completed">
+                              Completed
+                            </option>
+                          </select>
+                        </div>
+
+                        {/* Priority */}
+
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">
+                            Priority
+                          </label>
+
+                          <select
+                            value={editPriority}
+                            onChange={(e) =>
+                              setEditPriority(
+                                e.target.value
+                              )
+                            }
+                            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                          >
+                            <option value="Low">
+                              Low
+                            </option>
+
+                            <option value="Medium">
+                              Medium
+                            </option>
+
+                            <option value="High">
+                              High
+                            </option>
+                          </select>
+                        </div>
+
+                        {/* Due Date */}
+
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">
+                            Due Date
+                          </label>
+
+                          <input
+                            type="date"
+                            value={editDueDate}
+                            onChange={(e) =>
+                              setEditDueDate(
+                                e.target.value
+                              )
+                            }
+                            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                          />
+                        </div>
+
+                      </div>
+
+                      {/* Edit Actions */}
+
+                      <div className="mt-5 flex gap-3">
+
+                        <button
+                          type="button"
+                          onClick={updateTask}
+                          disabled={saving}
+                          className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {saving
+                            ? "Updating..."
+                            : "Update Task"}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={cancelEditTask}
+                          disabled={saving}
+                          className="rounded-lg bg-slate-200 px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-300 disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+
+                      </div>
+
                     </div>
 
-                    {/* Actions */}
+                  ) : (
 
-                    <div className="flex items-center gap-3">
+                    /* Normal Task View */
 
-                      <select
-                        value={task.status}
-                        onChange={(e) =>
-                          updateTaskStatus(
-                            task.id,
-                            e.target.value
-                          )
-                        }
-                        className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500"
-                      >
-                        <option value="Pending">
-                          Pending
-                        </option>
+                    <div className="flex items-center justify-between gap-4">
 
-                        <option value="In Progress">
-                          In Progress
-                        </option>
+                      {/* Task Information */}
 
-                        <option value="Completed">
-                          Completed
-                        </option>
-                      </select>
+                      <div>
 
-                      <button
-                        onClick={() =>
-                          deleteTask(task.id)
-                        }
-                        className="rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-                      >
-                        Delete
-                      </button>
+                        <h3 className="text-base font-semibold text-slate-800">
+                          {task.title}
+                        </h3>
+
+                        <p className="mt-1 text-sm text-slate-500">
+                          Project:{" "}
+                          {task.projectId?.name ||
+                            "Unknown Project"}
+                        </p>
+
+                        {task.description && (
+                          <p className="mt-1 text-sm text-slate-500">
+                            Description:{" "}
+                            {task.description}
+                          </p>
+                        )}
+
+                        <p className="mt-1 text-xs text-slate-400">
+                          Priority: {task.priority}
+                        </p>
+
+                        {task.dueDate && (
+                          <p className="mt-1 text-xs text-slate-400">
+                            Due Date:{" "}
+                            {new Date(
+                              task.dueDate
+                            ).toLocaleDateString()}
+                          </p>
+                        )}
+
+                        <p className="mt-1 text-xs text-slate-400">
+                          Task ID: {task.id}
+                        </p>
+
+                      </div>
+
+                      {/* Actions */}
+
+                      <div className="flex items-center gap-3">
+
+                        {/* Status */}
+
+                        <select
+                          value={task.status}
+                          disabled={
+                            updatingId === task.id
+                          }
+                          onChange={(e) =>
+                            updateTaskStatus(
+                              task,
+                              e.target.value
+                            )
+                          }
+                          className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500 disabled:opacity-50"
+                        >
+                          <option value="Pending">
+                            Pending
+                          </option>
+
+                          <option value="In Progress">
+                            In Progress
+                          </option>
+
+                          <option value="Completed">
+                            Completed
+                          </option>
+                        </select>
+
+                        {/* Edit */}
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            startEditTask(task)
+                          }
+                          className="rounded-lg px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+                        >
+                          Edit
+                        </button>
+
+                        {/* Delete */}
+
+                        <button
+                          type="button"
+                          disabled={
+                            deletingId === task.id
+                          }
+                          onClick={() =>
+                            deleteTask(task.id)
+                          }
+                          className="rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                        >
+                          {deletingId === task.id
+                            ? "Deleting..."
+                            : "Delete"}
+                        </button>
+
+                      </div>
 
                     </div>
-                  </div>
+                  )}
+
                 </div>
               ))}
+
             </div>
           )}
 
