@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
@@ -9,6 +10,7 @@ import ProjectCard from "../components/ProjectCard";
 import TaskCard from "../components/TaskCard";
 
 export default function Dashboard() {
+    const router = useRouter();
   const [projects, setProjects] = useState([]);
   const [tasks, setTasks] = useState([]);
 
@@ -121,7 +123,10 @@ export default function Dashboard() {
       value: pendingTasks,
     },
   ];
-
+// Edit Project
+const editProject = (project) => {
+  router.push(`/projects/${project.id}`);
+};
   // Delete Project
   const deleteProject = async (id) => {
     const confirmed = window.confirm(
@@ -463,13 +468,12 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
                 {projects.map((project) => (
                   <ProjectCard
-                    key={project.id}
-                    project={project}
-                    onDelete={deleteProject}
-                    deleting={
-                      deletingProjectId === project.id
-                    }
-                  />
+  key={project.id}
+  project={project}
+  onEdit={editProject}
+  onDelete={deleteProject}
+  deleting={deletingProjectId === project.id}
+/>
                 ))}
               </div>
             )}
