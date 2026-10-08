@@ -28,7 +28,10 @@ export default function TasksPage() {
   const [updatingId, setUpdatingId] = useState(null);
 
   const [error, setError] = useState("");
-
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [priorityFilter, setPriorityFilter] = useState("All");
+  const [sortBy, setSortBy] = useState("Newest");
   // Fetch Projects and Tasks
   useEffect(() => {
     async function fetchData() {
@@ -290,66 +293,110 @@ export default function TasksPage() {
   };
 
   // Update Task Status
-  const updateTaskStatus = async (task, newStatus) => {
-    try {
-      setUpdatingId(task.id);
-      setError("");
+  // Update Task Status
+const updateTaskStatus = async (task, newStatus) => {
+  const selectedProjectId =
+    task.projectId?._id || task.projectId;
 
-      const response = await fetch(
-        `/api/tasks/${task.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            projectId:
-              task.projectId?._id || task.projectId,
+  if (!selectedProjectId) {
+    setError(
+      "This task is not linked to a project. Please edit the task and select a project."
+    );
+    return;
+  }
 
-            title: task.title,
+  try {
+    setUpdatingId(task.id);
+    setError("");
 
-            description: task.description || "",
-
-            status: newStatus,
-
-            priority: task.priority || "Medium",
-
-            dueDate: task.dueDate || null,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.message || "Failed to update task"
-        );
+    const response = await fetch(
+      `/api/tasks/${task.id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectId: selectedProjectId,
+          title: task.title,
+          description: task.description || "",
+          status: newStatus,
+          priority: task.priority || "Medium",
+          dueDate: task.dueDate || null,
+        }),
       }
+    );
 
-      const updatedTask = {
-        ...data.task,
-        id: data.task._id,
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Failed to update task"
+      );
+    }
+
+    const updatedTask = {
+      ...data.task,
+      id: data.task._id,
+    };
+
+    setTasks((currentTasks) =>
+      currentTasks.map((currentTask) =>
+        currentTask.id === task.id
+          ? updatedTask
+          : currentTask
+      )
+    );
+  } catch (error) {
+    console.error("Update Task Error:", error);
+
+    setError(
+      error.message || "Failed to update task"
+    );
+  } finally {
+    setUpdatingId(null);
+  }
+};
+
+  // Search + Status + Priority Filters
+  const filteredTasks = tasks.filter((task) => {
+    const matchesSearch = task.title
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === "All" || task.status === statusFilter;
+
+    const matchesPriority =
+      priorityFilter === "All" || task.priority === priorityFilter;
+
+    return matchesSearch && matchesStatus && matchesPriority;
+  });
+  const sortedTasks = [...filteredTasks].sort((a, b) => {
+    if (sortBy === "Newest") {
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    }
+
+    if (sortBy === "Oldest") {
+      return new Date(a.createdAt) - new Date(b.createdAt);
+    }
+
+    if (sortBy === "Due Date") {
+      return new Date(a.dueDate) - new Date(b.dueDate);
+    }
+
+    if (sortBy === "Priority") {
+      const priorityOrder = {
+        High: 1,
+        Medium: 2,
+        Low: 3,
       };
 
-      setTasks((currentTasks) =>
-        currentTasks.map((currentTask) =>
-          currentTask.id === task.id
-            ? updatedTask
-            : currentTask
-        )
-      );
-    } catch (error) {
-      console.error("Update Task Error:", error);
-
-      setError(
-        error.message || "Failed to update task"
-      );
-    } finally {
-      setUpdatingId(null);
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
     }
-  };
 
+    return 0;
+  });
   return (
     <main className="min-h-screen bg-slate-100 pl-64">
       <Sidebar />
@@ -391,22 +438,16 @@ export default function TasksPage() {
 
               {/* Project Select */}
 
+
               <select
                 value={projectId}
-                onChange={(e) =>
-                  setProjectId(e.target.value)
-                }
+                onChange={(e) => setProjectId(e.target.value)}
                 className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               >
-                <option value="">
-                  Select Project
-                </option>
+                <option value="">Select Project</option>
 
                 {projects.map((project) => (
-                  <option
-                    key={project.id}
-                    value={project.id}
-                  >
+                  <option key={project.id} value={project.id}>
                     {project.name}
                   </option>
                 ))}
@@ -448,38 +489,86 @@ export default function TasksPage() {
 
           </div>
 
+
+          {/* Search and Filters */}
+          {!loading && tasks.length > 0 && (
+            <div className="mb-5 grid gap-4 md:grid-cols-4">
+              {/* Search */}
+              <input
+                type="text"
+                placeholder="Search tasks..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
+
+              {/* Status Filter */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="All">All Status</option>
+                <option value="Pending">Pending</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Completed">Completed</option>
+              </select>
+
+              {/* Priority Filter */}
+              <select
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value)}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="All">All Priority</option>
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+              </select>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="Newest">Newest</option>
+                <option value="Oldest">Oldest</option>
+                <option value="Due Date">Due Date</option>
+                <option value="Priority">Priority</option>
+              </select>
+            </div>
+          )}
+
           {/* Loading */}
 
           {loading ? (
             <div className="rounded-xl border bg-white p-10 text-center shadow-sm">
-              <p className="text-sm text-slate-500">
-                Loading tasks...
-              </p>
+              <p className="text-sm text-slate-500">Loading tasks...</p>
             </div>
-
           ) : tasks.length === 0 ? (
-
             /* No Tasks */
-
             <div className="rounded-xl border bg-white p-10 text-center shadow-sm">
-
               <h2 className="text-lg font-semibold text-slate-800">
                 No Tasks Found
               </h2>
-
               <p className="mt-2 text-sm text-slate-500">
                 Add your first task above.
               </p>
-
             </div>
-
+          ) : filteredTasks.length === 0 ? (
+            /* No Matching Tasks */
+            <div className="rounded-xl border bg-white p-10 text-center shadow-sm">
+              <h2 className="text-lg font-semibold text-slate-800">
+                No Matching Tasks Found
+              </h2>
+              <p className="mt-2 text-sm text-slate-500">
+                Try a different search term.
+              </p>
+            </div>
           ) : (
-
             /* Tasks List */
-
             <div className="space-y-4">
 
-              {tasks.map((task) => (
+              {filteredTasks.map((task) => (
 
                 <div
                   key={task.id}

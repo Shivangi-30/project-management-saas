@@ -10,13 +10,16 @@ import ProjectCard from "../components/ProjectCard";
 import TaskCard from "../components/TaskCard";
 
 export default function Dashboard() {
-    const router = useRouter();
+  const router = useRouter();
   const [projects, setProjects] = useState([]);
   const [tasks, setTasks] = useState([]);
 
   const [taskTitle, setTaskTitle] = useState("");
 
   const [loading, setLoading] = useState(true);
+  const [searchTask, setSearchTask] = useState("");
+
+const [taskStatusFilter, setTaskStatusFilter] = useState("All");
   const [saving, setSaving] = useState(false);
   const [deletingTaskId, setDeletingTaskId] = useState(null);
   const [deletingProjectId, setDeletingProjectId] = useState(null);
@@ -95,14 +98,28 @@ export default function Dashboard() {
   const pendingTasks = tasks.filter(
     (task) => task.status === "Pending"
   ).length;
+  const inProgressTasks = tasks.filter(
+    (task) => task.status === "In Progress"
+  ).length;
 
+  const filteredTasks = tasks.filter((task) => {
+  const matchesSearch = task.title
+    .toLowerCase()
+    .includes(searchTask.toLowerCase());
+
+  const matchesStatus =
+    taskStatusFilter === "All" ||
+    task.status === taskStatusFilter;
+
+  return matchesSearch && matchesStatus;
+});
   // Progress Percentage
   const progressPercentage =
     totalTasks === 0
       ? 0
       : Math.round(
-          (completedTasks / totalTasks) * 100
-        );
+        (completedTasks / totalTasks) * 100
+      );
 
   // Stats
   const stats = [
@@ -123,10 +140,10 @@ export default function Dashboard() {
       value: pendingTasks,
     },
   ];
-// Edit Project
-const editProject = (project) => {
-  router.push(`/projects/${project.id}`);
-};
+  // Edit Project
+  const editProject = (project) => {
+    router.push(`/projects/${project.id}`);
+  };
   // Delete Project
   const deleteProject = async (id) => {
     const confirmed = window.confirm(
@@ -181,75 +198,81 @@ const editProject = (project) => {
     }
   };
 
-  // Update Task Status
-  const toggleTaskStatus = async (id) => {
-    const task = tasks.find(
-      (currentTask) => currentTask.id === id
+ // Update Task Status
+
+const updateTaskStatus = async (id, newStatus) => {
+  const task = tasks.find(
+    (currentTask) => currentTask.id === id
+  );
+
+  if (!task) return;
+
+  try {
+    setUpdatingTaskId(id);
+    setError("");
+
+    const response = await fetch(
+      `/api/tasks/${id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectId:
+            task.projectId?._id || task.projectId,
+
+          title: task.title,
+
+          description:
+            task.description || "",
+
+          status: newStatus,
+
+          priority:
+            task.priority || "Medium",
+
+          dueDate:
+            task.dueDate || null,
+        }),
+      }
     );
 
-    if (!task) return;
+    const data = await response.json();
 
-    const newStatus =
-      task.status === "Completed"
-        ? "Pending"
-        : "Completed";
-
-    try {
-      setUpdatingTaskId(id);
-      setError("");
-
-      const response = await fetch(
-        `/api/tasks/${id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            projectId:
-              task.projectId?._id || task.projectId,
-            title: task.title,
-            description: task.description || "",
-            status: newStatus,
-            priority: task.priority || "Medium",
-            dueDate: task.dueDate || null,
-          }),
-        }
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Failed to update task"
       );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.message || "Failed to update task"
-        );
-      }
-
-      const updatedTask = {
-        ...data.task,
-        id: data.task._id,
-      };
-
-      setTasks((currentTasks) =>
-        currentTasks.map((currentTask) =>
-          currentTask.id === id
-            ? updatedTask
-            : currentTask
-        )
-      );
-    } catch (error) {
-      console.error(
-        "Toggle Task Status Error:",
-        error
-      );
-
-      setError(
-        error.message || "Failed to update task"
-      );
-    } finally {
-      setUpdatingTaskId(null);
     }
-  };
+
+    const updatedTask = {
+      ...data.task,
+      id: data.task._id,
+    };
+
+    setTasks((currentTasks) =>
+      currentTasks.map((currentTask) =>
+        currentTask.id === id
+          ? updatedTask
+          : currentTask
+      )
+    );
+
+  } catch (error) {
+    console.error(
+      "Update Task Status Error:",
+      error
+    );
+
+    setError(
+      error.message || "Failed to update task"
+    );
+
+  } finally {
+    setUpdatingTaskId(null);
+  }
+};
 
   // Delete Task
   const deleteTask = async (id) => {
@@ -425,7 +448,45 @@ const editProject = (project) => {
               {completedTasks} of {totalTasks} tasks completed
             </p>
           </div>
+{/* Task Status Breakdown */}
 
+<div className="mt-6 rounded-xl border bg-white p-6 shadow-sm">
+  <h2 className="text-lg font-semibold text-gray-900">
+    Task Status
+  </h2>
+
+  <div className="mt-4 space-y-4">
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-gray-600">
+        Pending
+      </span>
+
+      <span className="font-semibold text-gray-900">
+        {pendingTasks}
+      </span>
+    </div>
+
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-gray-600">
+        In Progress
+      </span>
+
+      <span className="font-semibold text-gray-900">
+        {inProgressTasks}
+      </span>
+    </div>
+
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-gray-600">
+        Completed
+      </span>
+
+      <span className="font-semibold text-gray-900">
+        {completedTasks}
+      </span>
+    </div>
+  </div>
+</div>
           {/* Projects */}
 
           <div className="mt-6">
@@ -443,8 +504,8 @@ const editProject = (project) => {
               <button
                 type="button"
                 onClick={() =>
-                  (window.location.href =
-                    "/projects")
+                (window.location.href =
+                  "/projects")
                 }
                 className="text-sm font-medium text-blue-600 hover:text-blue-800"
               >
@@ -468,12 +529,12 @@ const editProject = (project) => {
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
                 {projects.map((project) => (
                   <ProjectCard
-  key={project.id}
-  project={project}
-  onEdit={editProject}
-  onDelete={deleteProject}
-  deleting={deletingProjectId === project.id}
-/>
+                    key={project.id}
+                    project={project}
+                    onEdit={editProject}
+                    onDelete={deleteProject}
+                    deleting={deletingProjectId === project.id}
+                  />
                 ))}
               </div>
             )}
@@ -491,7 +552,27 @@ const editProject = (project) => {
                 Manage your project tasks
               </p>
             </div>
+{/* Search and Filter */}
+<div className="mb-5 flex flex-col gap-3 rounded-xl border bg-white p-4 shadow-sm sm:flex-row">
+  <input
+    type="text"
+    placeholder="Search tasks..."
+    value={searchTask}
+    onChange={(e) => setSearchTask(e.target.value)}
+    className="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+  />
 
+  <select
+    value={taskStatusFilter}
+    onChange={(e) => setTaskStatusFilter(e.target.value)}
+    className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+  >
+    <option value="All">All Status</option>
+    <option value="Pending">Pending</option>
+    <option value="In Progress">In Progress</option>
+    <option value="Completed">Completed</option>
+  </select>
+</div>
             {/* Add Task */}
 
             <div className="mb-5 flex flex-col gap-3 rounded-xl border bg-white p-4 shadow-sm sm:flex-row">
@@ -525,44 +606,56 @@ const editProject = (project) => {
             </div>
 
             {/* Task List */}
+{loading ? (
+  <div className="rounded-xl border bg-white p-8 text-center">
+    <p className="text-sm text-slate-500">
+      Loading tasks...
+    </p>
+  </div>
+) : tasks.length === 0 ? (
+  <div className="rounded-xl border bg-white p-8 text-center">
+    <p className="text-sm text-slate-500">
+      No tasks found.
+    </p>
+  </div>
+) : filteredTasks.length === 0 ? (
+  <div className="rounded-xl border bg-white p-8 text-center">
+    <p className="text-sm text-slate-500">
+      No tasks match your search or filter.
+    </p>
 
-            {loading ? (
-              <div className="rounded-xl border bg-white p-8 text-center">
-                <p className="text-sm text-slate-500">
-                  Loading tasks...
-                </p>
-              </div>
-            ) : tasks.length === 0 ? (
-              <div className="rounded-xl border bg-white p-8 text-center">
-                <p className="text-sm text-slate-500">
-                  No tasks found.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {tasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className={
-                      updatingTaskId === task.id
-                        ? "opacity-60"
-                        : ""
-                    }
-                  >
-                    <TaskCard
-                      task={task}
-                      onDelete={deleteTask}
-                      onToggleStatus={
-                        toggleTaskStatus
-                      }
-                      deleting={
-                        deletingTaskId === task.id
-                      }
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
+    <button
+      type="button"
+      onClick={() => {
+        setSearchTask("");
+        setTaskStatusFilter("All");
+      }}
+      className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+    >
+      Clear Filters
+    </button>
+  </div>
+) : (
+  <div className="space-y-3">
+    {filteredTasks.map((task) => (
+      <div
+        key={task.id}
+        className={
+          updatingTaskId === task.id
+            ? "opacity-60"
+            : ""
+        }
+      >
+        <TaskCard
+          task={task}
+          onDelete={deleteTask}
+          onStatusChange={updateTaskStatus}
+          deleting={deletingTaskId === task.id}
+        />
+      </div>
+    ))}
+  </div>
+)}
           </div>
 
         </div>
