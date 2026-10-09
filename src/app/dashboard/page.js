@@ -522,13 +522,31 @@ const updateTaskStatus = async (id, newStatus) => {
                   Loading projects...
                 </p>
               </div>
-            ) : recentProjects.length === 0 ? (
-              <div className="rounded-xl border bg-white p-8 text-center">
-                <p className="text-sm text-slate-500">
-                  No projects found.
-                </p>
-              </div>
-            ) : (
+            
+) : recentProjects.length === 0 ? (
+  <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center shadow-sm">
+    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
+      <span className="text-2xl">📁</span>
+    </div>
+
+    <h3 className="mt-4 text-lg font-semibold text-slate-800">
+      No Projects Yet
+    </h3>
+
+    <p className="mx-auto mt-2 max-w-sm text-sm text-slate-500">
+      You have not created any projects yet. Create your first
+      project to start organizing your work.
+    </p>
+
+    <button
+      type="button"
+      onClick={() => router.push("/projects")}
+      className="mt-5 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+    >
+      Create Your First Project
+    </button>
+  </div>
+) : (
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
                 {recentProjects.map((project) => (
                   <ProjectCard
@@ -615,13 +633,23 @@ const updateTaskStatus = async (id, newStatus) => {
       Loading tasks...
     </p>
   </div>
+
 ) : tasks.length === 0 ? (
-  <div className="rounded-xl border bg-white p-8 text-center">
-    <p className="text-sm text-slate-500">
-      No tasks found.
+  <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center shadow-sm">
+    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
+      <span className="text-2xl">📋</span>
+    </div>
+
+    <h3 className="mt-4 text-lg font-semibold text-slate-800">
+      No Tasks Yet
+    </h3>
+
+    <p className="mx-auto mt-2 max-w-sm text-sm text-slate-500">
+      You have not added any tasks yet. Enter a task title
+      above and click Add Task to get started.
     </p>
   </div>
-) : filteredTasks.length === 0 ? (
+): filteredTasks.length === 0 ? (
   <div className="rounded-xl border bg-white p-8 text-center">
     <p className="text-sm text-slate-500">
       No tasks match your search or filter.
