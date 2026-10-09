@@ -103,6 +103,7 @@ const [taskStatusFilter, setTaskStatusFilter] = useState("All");
   ).length;
 
   const filteredTasks = tasks.filter((task) => {
+    
   const matchesSearch = task.title
     .toLowerCase()
     .includes(searchTask.toLowerCase());
@@ -113,6 +114,12 @@ const [taskStatusFilter, setTaskStatusFilter] = useState("All");
 
   return matchesSearch && matchesStatus;
 });
+const recentProjects = [...projects]
+  .sort(
+    (a, b) =>
+      new Date(b.createdAt) - new Date(a.createdAt)
+  )
+  .slice(0, 5);
   // Progress Percentage
   const progressPercentage =
     totalTasks === 0
@@ -502,15 +509,11 @@ const updateTaskStatus = async (id, newStatus) => {
               </div>
 
               <button
-                type="button"
-                onClick={() =>
-                (window.location.href =
-                  "/projects")
-                }
-                className="text-sm font-medium text-blue-600 hover:text-blue-800"
-              >
-                View All
-              </button>
+  onClick={() => router.push("/projects")}
+  className="text-sm font-medium text-blue-600 hover:text-blue-700"
+>
+  View All →
+</button>
             </div>
 
             {loading ? (
@@ -519,7 +522,7 @@ const updateTaskStatus = async (id, newStatus) => {
                   Loading projects...
                 </p>
               </div>
-            ) : projects.length === 0 ? (
+            ) : recentProjects.length === 0 ? (
               <div className="rounded-xl border bg-white p-8 text-center">
                 <p className="text-sm text-slate-500">
                   No projects found.
@@ -527,7 +530,7 @@ const updateTaskStatus = async (id, newStatus) => {
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-                {projects.map((project) => (
+                {recentProjects.map((project) => (
                   <ProjectCard
                     key={project.id}
                     project={project}
