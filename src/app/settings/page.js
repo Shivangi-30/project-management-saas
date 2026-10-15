@@ -176,13 +176,13 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 pl-64">
-      <Sidebar />
+    <main className="min-h-screen overflow-x-clip bg-slate-100 md:pl-64">
+     <Sidebar />
 
       <section className="min-h-screen">
         <Header />
 
-        <div className="p-6">
+        <div className="min-w-0 p-3 sm:p-6">
 
           {/* Page Heading */}
           <div className="mb-6">
@@ -209,7 +209,7 @@ export default function SettingsPage() {
           )}
 
           {/* Profile Settings */}
-          <div className="mb-6 rounded-xl border bg-white p-6 shadow-sm">
+          <div className="mb-6 rounded-xl border bg-white p-4 shadow-sm sm:p-6">
             <h2 className="text-lg font-semibold text-slate-800">
               Profile Settings
             </h2>
@@ -270,7 +270,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Change Password */}
-          <div className="mb-6 rounded-xl border bg-white p-6 shadow-sm">
+          <div className="mb-6 rounded-xl border bg-white p-4 shadow-sm sm:p-6">
             <h2 className="text-lg font-semibold text-slate-800">
               Change Password
             </h2>
@@ -362,7 +362,7 @@ export default function SettingsPage() {
             <div className="mt-5 space-y-4">
 
               {/* Email Notifications */}
-              <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="flex items-start justify-between gap-4 rounded-lg border p-3 sm:items-center sm:p-4">
                 <div>
                   <h3 className="text-sm font-medium text-slate-800">
                     Email Notifications

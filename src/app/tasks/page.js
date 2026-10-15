@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -8,6 +9,8 @@ import Header from "../components/Header";
 export default function TasksPage() {
   const [tasks, setTasks] = useState([]);
   const [projects, setProjects] = useState([]);
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Add Task fields
   const [taskTitle, setTaskTitle] = useState("");
@@ -22,16 +25,19 @@ export default function TasksPage() {
   const [editPriority, setEditPriority] = useState("Medium");
   const [editDueDate, setEditDueDate] = useState("");
 
+  // Loading and action states
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
 
+  // Search, filters and sorting
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [priorityFilter, setPriorityFilter] = useState("All");
   const [sortBy, setSortBy] = useState("Newest");
+
   // Fetch Projects and Tasks
   useEffect(() => {
     async function fetchData() {
@@ -39,11 +45,10 @@ export default function TasksPage() {
         setLoading(true);
         setError("");
 
-        const [projectsResponse, tasksResponse] =
-          await Promise.all([
-            fetch("/api/projects"),
-            fetch("/api/tasks"),
-          ]);
+        const [projectsResponse, tasksResponse] = await Promise.all([
+          fetch("/api/projects"),
+          fetch("/api/tasks"),
+        ]);
 
         const projectsData = await projectsResponse.json();
         const tasksData = await tasksResponse.json();
@@ -60,12 +65,10 @@ export default function TasksPage() {
           );
         }
 
-        const formattedProjects = projectsData.projects.map(
-          (project) => ({
-            ...project,
-            id: project._id,
-          })
-        );
+        const formattedProjects = projectsData.projects.map((project) => ({
+          ...project,
+          id: project._id,
+        }));
 
         const formattedTasks = tasksData.tasks.map((task) => ({
           ...task,
@@ -76,10 +79,7 @@ export default function TasksPage() {
         setTasks(formattedTasks);
       } catch (error) {
         console.error("Fetch Tasks Data Error:", error);
-
-        setError(
-          error.message || "Failed to load tasks"
-        );
+        setError(error.message || "Failed to load tasks");
       } finally {
         setLoading(false);
       }
@@ -111,16 +111,14 @@ export default function TasksPage() {
         },
         body: JSON.stringify({
           projectId,
-          title: taskTitle,
+          title: taskTitle.trim(),
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.message || "Failed to create task"
-        );
+        throw new Error(data.message || "Failed to create task");
       }
 
       const newTask = {
@@ -128,19 +126,12 @@ export default function TasksPage() {
         id: data.task._id,
       };
 
-      setTasks((currentTasks) => [
-        newTask,
-        ...currentTasks,
-      ]);
-
+      setTasks((currentTasks) => [newTask, ...currentTasks]);
       setTaskTitle("");
       setProjectId("");
     } catch (error) {
       console.error("Add Task Error:", error);
-
-      setError(
-        error.message || "Failed to create task"
-      );
+      setError(error.message || "Failed to create task");
     } finally {
       setSaving(false);
     }
@@ -165,9 +156,7 @@ export default function TasksPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.message || "Failed to delete task"
-        );
+        throw new Error(data.message || "Failed to delete task");
       }
 
       setTasks((currentTasks) =>
@@ -175,10 +164,7 @@ export default function TasksPage() {
       );
     } catch (error) {
       console.error("Delete Task Error:", error);
-
-      setError(
-        error.message || "Failed to delete task"
-      );
+      setError(error.message || "Failed to delete task");
     } finally {
       setDeletingId(null);
     }
@@ -187,7 +173,6 @@ export default function TasksPage() {
   // Start Edit Task
   const startEditTask = (task) => {
     setEditingTaskId(task.id);
-
     setEditTitle(task.title || "");
     setEditDescription(task.description || "");
 
@@ -199,11 +184,7 @@ export default function TasksPage() {
     setEditPriority(task.priority || "Medium");
 
     if (task.dueDate) {
-      setEditDueDate(
-        new Date(task.dueDate)
-          .toISOString()
-          .split("T")[0]
-      );
+      setEditDueDate(new Date(task.dueDate).toISOString().split("T")[0]);
     } else {
       setEditDueDate("");
     }
@@ -214,14 +195,12 @@ export default function TasksPage() {
   // Cancel Edit
   const cancelEditTask = () => {
     setEditingTaskId(null);
-
     setEditTitle("");
     setEditDescription("");
     setEditProjectId("");
     setEditStatus("Pending");
     setEditPriority("Medium");
     setEditDueDate("");
-
     setError("");
   };
 
@@ -241,30 +220,25 @@ export default function TasksPage() {
       setSaving(true);
       setError("");
 
-      const response = await fetch(
-        `/api/tasks/${editingTaskId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            projectId: editProjectId,
-            title: editTitle,
-            description: editDescription,
-            status: editStatus,
-            priority: editPriority,
-            dueDate: editDueDate || null,
-          }),
-        }
-      );
+      const response = await fetch(`/api/tasks/${editingTaskId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectId: editProjectId,
+          title: editTitle.trim(),
+          description: editDescription,
+          status: editStatus,
+          priority: editPriority,
+          dueDate: editDueDate || null,
+        }),
+      });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.message || "Failed to update task"
-        );
+        throw new Error(data.message || "Failed to update task");
       }
 
       const updatedTask = {
@@ -274,44 +248,35 @@ export default function TasksPage() {
 
       setTasks((currentTasks) =>
         currentTasks.map((task) =>
-          task.id === editingTaskId
-            ? updatedTask
-            : task
+          task.id === editingTaskId ? updatedTask : task
         )
       );
 
       cancelEditTask();
     } catch (error) {
       console.error("Update Task Error:", error);
-
-      setError(
-        error.message || "Failed to update task"
-      );
+      setError(error.message || "Failed to update task");
     } finally {
       setSaving(false);
     }
   };
 
   // Update Task Status
-  // Update Task Status
-const updateTaskStatus = async (task, newStatus) => {
-  const selectedProjectId =
-    task.projectId?._id || task.projectId;
+  const updateTaskStatus = async (task, newStatus) => {
+    const selectedProjectId = task.projectId?._id || task.projectId;
 
-  if (!selectedProjectId) {
-    setError(
-      "This task is not linked to a project. Please edit the task and select a project."
-    );
-    return;
-  }
+    if (!selectedProjectId) {
+      setError(
+        "This task is not linked to a project. Please edit the task and select a project."
+      );
+      return;
+    }
 
-  try {
-    setUpdatingId(task.id);
-    setError("");
+    try {
+      setUpdatingId(task.id);
+      setError("");
 
-    const response = await fetch(
-      `/api/tasks/${task.id}`,
-      {
+      const response = await fetch(`/api/tasks/${task.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -324,43 +289,35 @@ const updateTaskStatus = async (task, newStatus) => {
           priority: task.priority || "Medium",
           dueDate: task.dueDate || null,
         }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to update task");
       }
-    );
 
-    const data = await response.json();
+      const updatedTask = {
+        ...data.task,
+        id: data.task._id,
+      };
 
-    if (!response.ok) {
-      throw new Error(
-        data.message || "Failed to update task"
+      setTasks((currentTasks) =>
+        currentTasks.map((currentTask) =>
+          currentTask.id === task.id ? updatedTask : currentTask
+        )
       );
+    } catch (error) {
+      console.error("Update Task Error:", error);
+      setError(error.message || "Failed to update task");
+    } finally {
+      setUpdatingId(null);
     }
+  };
 
-    const updatedTask = {
-      ...data.task,
-      id: data.task._id,
-    };
-
-    setTasks((currentTasks) =>
-      currentTasks.map((currentTask) =>
-        currentTask.id === task.id
-          ? updatedTask
-          : currentTask
-      )
-    );
-  } catch (error) {
-    console.error("Update Task Error:", error);
-
-    setError(
-      error.message || "Failed to update task"
-    );
-  } finally {
-    setUpdatingId(null);
-  }
-};
-
-  // Search + Status + Priority Filters
+  // Search and filters
   const filteredTasks = tasks.filter((task) => {
-    const matchesSearch = task.title
+    const matchesSearch = (task.title || "")
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
 
@@ -372,16 +329,20 @@ const updateTaskStatus = async (task, newStatus) => {
 
     return matchesSearch && matchesStatus && matchesPriority;
   });
+
+  // Sort filtered tasks
   const sortedTasks = [...filteredTasks].sort((a, b) => {
     if (sortBy === "Newest") {
-      return new Date(b.createdAt) - new Date(a.createdAt);
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
     }
 
     if (sortBy === "Oldest") {
-      return new Date(a.createdAt) - new Date(b.createdAt);
+      return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
     }
 
     if (sortBy === "Due Date") {
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
       return new Date(a.dueDate) - new Date(b.dueDate);
     }
 
@@ -392,60 +353,60 @@ const updateTaskStatus = async (task, newStatus) => {
         Low: 3,
       };
 
-      return priorityOrder[a.priority] - priorityOrder[b.priority];
+      return (
+        (priorityOrder[a.priority] || 4) -
+        (priorityOrder[b.priority] || 4)
+      );
     }
 
     return 0;
   });
+
   return (
-    <main className="min-h-screen bg-slate-100 pl-64">
-      <Sidebar />
+    <main className="min-h-screen overflow-x-clip bg-slate-100 md:pl-64">
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
-      <section className="min-h-screen">
-        <Header />
+      <section className="min-h-screen min-w-0">
+        <Header onMenuClick={() => setSidebarOpen(true)} />
 
-        <div className="p-6">
-
+        <div className="min-w-0 p-3 sm:p-6">
           {/* Page Heading */}
-
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-slate-800">
+            <h1 className="text-xl font-bold text-slate-800 sm:text-2xl lg:text-3xl">
               Tasks
             </h1>
-
             <p className="mt-1 text-sm text-slate-500">
               Manage and track all your tasks.
             </p>
           </div>
 
           {/* Error Message */}
-
           {error && (
-            <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div
+              role="alert"
+              className="mb-6 break-words rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600"
+            >
               {error}
             </div>
           )}
 
           {/* Add Task */}
-
-          <div className="mb-6 rounded-xl border bg-white p-5 shadow-sm">
-
+          <div className="mb-6 min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
             <h2 className="mb-4 text-lg font-semibold text-slate-800">
               Add New Task
             </h2>
 
-            <div className="flex flex-col gap-4 md:flex-row">
-
-              {/* Project Select */}
-
-
+            <div className="flex min-w-0 flex-col gap-3 sm:gap-4 md:flex-row">
               <select
+                aria-label="Select project"
                 value={projectId}
                 onChange={(e) => setProjectId(e.target.value)}
-                className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="w-full min-w-0 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:flex-1"
               >
                 <option value="">Select Project</option>
-
                 {projects.map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.name}
@@ -453,60 +414,49 @@ const updateTaskStatus = async (task, newStatus) => {
                 ))}
               </select>
 
-              {/* Task Title */}
-
               <input
                 type="text"
+                aria-label="Task title"
                 placeholder="Enter task title"
                 value={taskTitle}
-                onChange={(e) =>
-                  setTaskTitle(e.target.value)
-                }
-                className="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                onChange={(e) => setTaskTitle(e.target.value)}
+                className="w-full min-w-0 flex-1 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
-
-              {/* Add Button */}
 
               <button
                 type="button"
                 onClick={addTask}
-                disabled={
-                  saving || projects.length === 0
-                }
-                className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={saving || loading || projects.length === 0}
+                className="w-full shrink-0 rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 md:w-auto"
               >
                 {saving ? "Adding..." : "Add Task"}
               </button>
-
             </div>
 
             {projects.length === 0 && !loading && (
               <p className="mt-3 text-sm text-amber-600">
-                Please create a project first before
-                adding a task.
+                Please create a project first before adding a task.
               </p>
             )}
-
           </div>
-
 
           {/* Search and Filters */}
           {!loading && tasks.length > 0 && (
-            <div className="mb-5 grid gap-4 md:grid-cols-4">
-              {/* Search */}
+            <div className="mb-5 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
               <input
                 type="text"
+                aria-label="Search tasks"
                 placeholder="Search tasks..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="w-full min-w-0 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
 
-              {/* Status Filter */}
               <select
+                aria-label="Filter by status"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="w-full min-w-0 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               >
                 <option value="All">All Status</option>
                 <option value="Pending">Pending</option>
@@ -514,21 +464,23 @@ const updateTaskStatus = async (task, newStatus) => {
                 <option value="Completed">Completed</option>
               </select>
 
-              {/* Priority Filter */}
               <select
+                aria-label="Filter by priority"
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value)}
-                className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="w-full min-w-0 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               >
                 <option value="All">All Priority</option>
                 <option value="Low">Low</option>
                 <option value="Medium">Medium</option>
                 <option value="High">High</option>
               </select>
+
               <select
+                aria-label="Sort tasks"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="w-full min-w-0 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               >
                 <option value="Newest">Newest</option>
                 <option value="Oldest">Oldest</option>
@@ -539,14 +491,12 @@ const updateTaskStatus = async (task, newStatus) => {
           )}
 
           {/* Loading */}
-
           {loading ? (
-            <div className="rounded-xl border bg-white p-10 text-center shadow-sm">
+            <div className="rounded-xl border bg-white p-8 text-center shadow-sm sm:p-10">
               <p className="text-sm text-slate-500">Loading tasks...</p>
             </div>
           ) : tasks.length === 0 ? (
-            /* No Tasks */
-            <div className="rounded-xl border bg-white p-10 text-center shadow-sm">
+            <div className="rounded-xl border bg-white p-8 text-center shadow-sm sm:p-10">
               <h2 className="text-lg font-semibold text-slate-800">
                 No Tasks Found
               </h2>
@@ -555,335 +505,213 @@ const updateTaskStatus = async (task, newStatus) => {
               </p>
             </div>
           ) : filteredTasks.length === 0 ? (
-            /* No Matching Tasks */
-            <div className="rounded-xl border bg-white p-10 text-center shadow-sm">
+            <div className="rounded-xl border bg-white p-8 text-center shadow-sm sm:p-10">
               <h2 className="text-lg font-semibold text-slate-800">
                 No Matching Tasks Found
               </h2>
               <p className="mt-2 text-sm text-slate-500">
-                Try a different search term.
+                Try a different search term or filter.
               </p>
             </div>
           ) : (
             /* Tasks List */
-            <div className="space-y-4">
-
-              {filteredTasks.map((task) => (
-
+            <div className="min-w-0 space-y-4">
+              {sortedTasks.map((task) => (
                 <div
                   key={task.id}
-                  className="rounded-xl border bg-white p-5 shadow-sm transition hover:shadow-md"
+                  className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md sm:p-5"
                 >
-
                   {editingTaskId === task.id ? (
-
                     /* Edit Task Form */
-
-                    <div>
-
+                    <div className="min-w-0">
                       <h3 className="mb-5 text-lg font-semibold text-slate-800">
                         Edit Task
                       </h3>
 
-                      <div className="grid gap-4 md:grid-cols-2">
-
-                        {/* Title */}
-
-                        <div>
+                      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="min-w-0">
                           <label className="mb-1 block text-sm font-medium text-slate-700">
                             Task Title
                           </label>
-
                           <input
                             type="text"
                             value={editTitle}
-                            onChange={(e) =>
-                              setEditTitle(
-                                e.target.value
-                              )
-                            }
-                            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            className="w-full min-w-0 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                           />
                         </div>
 
-                        {/* Project */}
-
-                        <div>
+                        <div className="min-w-0">
                           <label className="mb-1 block text-sm font-medium text-slate-700">
                             Project
                           </label>
-
                           <select
                             value={editProjectId}
-                            onChange={(e) =>
-                              setEditProjectId(
-                                e.target.value
-                              )
-                            }
-                            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            onChange={(e) => setEditProjectId(e.target.value)}
+                            className="w-full min-w-0 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                           >
-                            <option value="">
-                              Select Project
-                            </option>
-
+                            <option value="">Select Project</option>
                             {projects.map((project) => (
-                              <option
-                                key={project.id}
-                                value={project.id}
-                              >
+                              <option key={project.id} value={project.id}>
                                 {project.name}
                               </option>
                             ))}
                           </select>
                         </div>
 
-                        {/* Description */}
-
-                        <div className="md:col-span-2">
+                        <div className="min-w-0 sm:col-span-2">
                           <label className="mb-1 block text-sm font-medium text-slate-700">
                             Description
                           </label>
-
                           <textarea
-                            rows="3"
+                            rows={3}
                             value={editDescription}
                             onChange={(e) =>
-                              setEditDescription(
-                                e.target.value
-                              )
+                              setEditDescription(e.target.value)
                             }
                             placeholder="Enter task description"
-                            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            className="w-full min-w-0 resize-y rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                           />
                         </div>
 
-                        {/* Status */}
-
-                        <div>
+                        <div className="min-w-0">
                           <label className="mb-1 block text-sm font-medium text-slate-700">
                             Status
                           </label>
-
                           <select
                             value={editStatus}
-                            onChange={(e) =>
-                              setEditStatus(
-                                e.target.value
-                              )
-                            }
-                            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            onChange={(e) => setEditStatus(e.target.value)}
+                            className="w-full min-w-0 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                           >
-                            <option value="Pending">
-                              Pending
-                            </option>
-
-                            <option value="In Progress">
-                              In Progress
-                            </option>
-
-                            <option value="Completed">
-                              Completed
-                            </option>
+                            <option value="Pending">Pending</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Completed">Completed</option>
                           </select>
                         </div>
 
-                        {/* Priority */}
-
-                        <div>
+                        <div className="min-w-0">
                           <label className="mb-1 block text-sm font-medium text-slate-700">
                             Priority
                           </label>
-
                           <select
                             value={editPriority}
-                            onChange={(e) =>
-                              setEditPriority(
-                                e.target.value
-                              )
-                            }
-                            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            onChange={(e) => setEditPriority(e.target.value)}
+                            className="w-full min-w-0 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                           >
-                            <option value="Low">
-                              Low
-                            </option>
-
-                            <option value="Medium">
-                              Medium
-                            </option>
-
-                            <option value="High">
-                              High
-                            </option>
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
                           </select>
                         </div>
 
-                        {/* Due Date */}
-
-                        <div>
+                        <div className="min-w-0">
                           <label className="mb-1 block text-sm font-medium text-slate-700">
                             Due Date
                           </label>
-
                           <input
                             type="date"
                             value={editDueDate}
-                            onChange={(e) =>
-                              setEditDueDate(
-                                e.target.value
-                              )
-                            }
-                            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            onChange={(e) => setEditDueDate(e.target.value)}
+                            className="w-full min-w-0 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                           />
                         </div>
-
                       </div>
 
                       {/* Edit Actions */}
-
-                      <div className="mt-5 flex gap-3">
-
+                      <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                         <button
                           type="button"
                           onClick={updateTask}
                           disabled={saving}
-                          className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="w-full rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                         >
-                          {saving
-                            ? "Updating..."
-                            : "Update Task"}
+                          {saving ? "Updating..." : "Update Task"}
                         </button>
 
                         <button
                           type="button"
                           onClick={cancelEditTask}
                           disabled={saving}
-                          className="rounded-lg bg-slate-200 px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-300 disabled:opacity-50"
+                          className="w-full rounded-lg bg-slate-200 px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-300 disabled:opacity-50 sm:w-auto"
                         >
                           Cancel
                         </button>
-
                       </div>
-
                     </div>
-
                   ) : (
-
                     /* Normal Task View */
-
-                    <div className="flex items-center justify-between gap-4">
-
+                    <div className="flex min-w-0 flex-col gap-4 md:flex-row md:items-center md:justify-between">
                       {/* Task Information */}
-
-                      <div>
-
-                        <h3 className="text-base font-semibold text-slate-800">
+                      <div className="min-w-0 flex-1 break-words">
+                        <h3 className="break-words text-base font-semibold text-slate-800">
                           {task.title}
                         </h3>
 
-                        <p className="mt-1 text-sm text-slate-500">
-                          Project:{" "}
-                          {task.projectId?.name ||
-                            "Unknown Project"}
+                        <p className="mt-1 break-words text-sm text-slate-500">
+                          Project: {task.projectId?.name || "Unknown Project"}
                         </p>
 
                         {task.description && (
-                          <p className="mt-1 text-sm text-slate-500">
-                            Description:{" "}
-                            {task.description}
+                          <p className="mt-1 break-words text-sm text-slate-500">
+                            Description: {task.description}
                           </p>
                         )}
 
                         <p className="mt-1 text-xs text-slate-400">
-                          Priority: {task.priority}
+                          Priority: {task.priority || "Medium"}
                         </p>
 
                         {task.dueDate && (
                           <p className="mt-1 text-xs text-slate-400">
                             Due Date:{" "}
-                            {new Date(
-                              task.dueDate
-                            ).toLocaleDateString()}
+                            {new Date(task.dueDate).toLocaleDateString()}
                           </p>
                         )}
 
-                        <p className="mt-1 text-xs text-slate-400">
+                        <p className="mt-1 break-all text-xs text-slate-400">
                           Task ID: {task.id}
                         </p>
-
                       </div>
 
-                      {/* Actions */}
-
-                      <div className="flex items-center gap-3">
-
-                        {/* Status */}
-
+                      {/* Task Actions */}
+                      <div className="flex min-w-0 flex-wrap items-center gap-2 md:justify-end">
                         <select
-                          value={task.status}
-                          disabled={
-                            updatingId === task.id
-                          }
+                          aria-label={`Status for ${task.title}`}
+                          value={task.status || "Pending"}
+                          disabled={updatingId === task.id}
                           onChange={(e) =>
-                            updateTaskStatus(
-                              task,
-                              e.target.value
-                            )
+                            updateTaskStatus(task, e.target.value)
                           }
-                          className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500 disabled:opacity-50"
+                          className="w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-blue-500 disabled:opacity-50 sm:w-auto"
                         >
-                          <option value="Pending">
-                            Pending
-                          </option>
-
-                          <option value="In Progress">
-                            In Progress
-                          </option>
-
-                          <option value="Completed">
-                            Completed
-                          </option>
+                          <option value="Pending">Pending</option>
+                          <option value="In Progress">In Progress</option>
+                          <option value="Completed">Completed</option>
                         </select>
-
-                        {/* Edit */}
 
                         <button
                           type="button"
-                          onClick={() =>
-                            startEditTask(task)
-                          }
-                          className="rounded-lg px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+                          onClick={() => startEditTask(task)}
+                          className="shrink-0 rounded-lg px-3 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50"
                         >
                           Edit
                         </button>
 
-                        {/* Delete */}
-
                         <button
                           type="button"
-                          disabled={
-                            deletingId === task.id
-                          }
-                          onClick={() =>
-                            deleteTask(task.id)
-                          }
-                          className="rounded-lg px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                          disabled={deletingId === task.id}
+                          onClick={() => deleteTask(task.id)}
+                          className="shrink-0 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
                         >
-                          {deletingId === task.id
-                            ? "Deleting..."
-                            : "Delete"}
+                          {deletingId === task.id ? "Deleting..." : "Delete"}
                         </button>
-
                       </div>
-
                     </div>
                   )}
-
                 </div>
               ))}
-
             </div>
           )}
-
         </div>
       </section>
     </main>

@@ -24,6 +24,7 @@ const [taskStatusFilter, setTaskStatusFilter] = useState("All");
   const [deletingTaskId, setDeletingTaskId] = useState(null);
   const [deletingProjectId, setDeletingProjectId] = useState(null);
   const [updatingTaskId, setUpdatingTaskId] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [error, setError] = useState("");
 
@@ -392,14 +393,17 @@ const updateTaskStatus = async (id, newStatus) => {
     }
   };
 
-  return (
-    <main className="min-h-screen bg-slate-100 pl-64">
-      <Sidebar />
+ return (
+  <main className="min-h-screen overflow-x-clip bg-slate-100 md:pl-64">
+    <Sidebar
+      isOpen={sidebarOpen}
+      onClose={() => setSidebarOpen(false)}
+    />
 
-      <section className="min-h-screen">
-        <Header />
+    <section className="min-h-screen min-w-0">
+      <Header onMenuClick={() => setSidebarOpen(true)} />
 
-        <div className="p-6">
+      <div className="p-3 sm:p-6">
 
           {/* Error Message */}
 

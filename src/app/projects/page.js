@@ -17,6 +17,7 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [error, setError] = useState("");
 
@@ -206,17 +207,20 @@ export default function ProjectsPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-100 pl-64">
-      <Sidebar />
+    <main className="min-h-screen overflow-x-clip bg-slate-100 md:pl-64">
+  <Sidebar
+    isOpen={sidebarOpen}
+    onClose={() => setSidebarOpen(false)}
+  />
 
-      <section className="min-h-screen">
-        <Header />
+  <section className="min-h-screen min-w-0">
+    <Header onMenuClick={() => setSidebarOpen(true)} />
 
-        <div className="p-6">
+    <div className="min-w-0 p-3 sm:p-6">
 
           {/* Page Heading */}
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-slate-800">
+            <h1 className="text-xl font-bold text-slate-800 sm:text-2xl lg:text-3xl">
               Projects
             </h1>
 
@@ -233,7 +237,7 @@ export default function ProjectsPage() {
           )}
 
           {/* Add / Edit Project Form */}
-          <div className="mb-6 rounded-xl border bg-white p-5 shadow-sm">
+          <div className="mb-6 min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
 
             <h2 className="mb-4 text-lg font-semibold text-slate-800">
               {editingProjectId
@@ -241,7 +245,7 @@ export default function ProjectsPage() {
                 : "Add New Project"}
             </h2>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid min-w-0 grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
 
               {/* Project Name */}
               <input
@@ -275,8 +279,7 @@ export default function ProjectsPage() {
                   : addProject
               }
               disabled={saving}
-              className="mt-4 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
+              className="mt-3 w-full rounded-lg bg-slate-200 px-5 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-300 disabled:opacity-50 sm:ml-3 sm:mt-0 sm:w-auto">
               {saving
                 ? "Saving..."
                 : editingProjectId
@@ -321,7 +324,7 @@ export default function ProjectsPage() {
           ) : (
 
             /* Projects List */
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 sm:gap-5">
 
               {projects.map((project) => (
                 <ProjectCard
