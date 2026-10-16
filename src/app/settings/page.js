@@ -7,6 +7,7 @@ import Header from "../components/Header";
 
 export default function SettingsPage() {
   const [user, setUser] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [name, setName] = useState("");
 
@@ -20,6 +21,7 @@ export default function SettingsPage() {
   const [changingPassword, setChangingPassword] = useState(false);
 
   const [message, setMessage] = useState("");
+
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -177,10 +179,17 @@ export default function SettingsPage() {
 
   return (
     <main className="min-h-screen overflow-x-clip bg-slate-100 md:pl-64">
-     <Sidebar />
+
+<Sidebar
+  isOpen={sidebarOpen}
+  onClose={() => setSidebarOpen(false)}
+/>
+
 
       <section className="min-h-screen">
-        <Header />
+
+<Header onMenuClick={() => setSidebarOpen(true)} />
+
 
         <div className="min-w-0 p-3 sm:p-6">
 

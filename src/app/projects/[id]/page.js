@@ -18,6 +18,7 @@ export default function ProjectDetails() {
 
   const [taskTitle, setTaskTitle] = useState("");
   const [editingTaskId, setEditingTaskId] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Fetch Project and Tasks
   useEffect(() => {
@@ -77,13 +78,18 @@ export default function ProjectDetails() {
   // Loading State
   if (loading) {
     return (
-      <main className="min-h-screen bg-slate-100 pl-64">
-        <Sidebar />
 
-        <section className="min-h-screen">
-          <Header />
+      <main className="min-h-screen overflow-x-clip bg-slate-100 md:pl-64">
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
 
-          <div className="p-6">
+        <section className="min-h-screen min-w-0">
+          <Header onMenuClick={() => setSidebarOpen(true)} />
+
+
+          <div className="min-w-0 p-3 sm:p-6">
             <div className="rounded-xl border bg-white p-6 shadow-sm">
               <p className="text-sm text-slate-500">
                 Loading project...
@@ -98,13 +104,16 @@ export default function ProjectDetails() {
   // Error / Project Not Found
   if (error || !project) {
     return (
-      <main className="min-h-screen bg-slate-100 pl-64">
-        <Sidebar />
+      <main className="min-h-screen overflow-x-clip bg-slate-100 md:pl-64">
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
 
-        <section className="min-h-screen">
-          <Header />
+        <section className="min-h-screen min-w-0">
+          <Header onMenuClick={() => setSidebarOpen(true)} />
 
-          <div className="p-6">
+          <div className="min-w-0 p-3 sm:p-6">
             <div className="rounded-xl border bg-white p-6 shadow-sm">
               <h1 className="text-2xl font-bold text-red-600">
                 {error || "Project not found"}
@@ -295,13 +304,16 @@ export default function ProjectDetails() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 pl-64">
-      <Sidebar />
+    <main className="min-h-screen overflow-x-clip bg-slate-100 md:pl-64">
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
-      <section className="min-h-screen">
-        <Header />
+      <section className="min-h-screen min-w-0">
+        <Header onMenuClick={() => setSidebarOpen(true)} />
 
-        <div className="p-6">
+        <div className="min-w-0 p-3 sm:p-6">
           {/* Back Button */}
           <Link
             href="/projects"
@@ -399,11 +411,10 @@ export default function ProjectDetails() {
                       {/* Task Information */}
                       <div className="flex-1">
                         <p
-                          className={`font-medium ${
-                            task.status === "Completed"
+                          className={`font-medium ${task.status === "Completed"
                               ? "text-slate-400 line-through"
                               : "text-slate-800"
-                          }`}
+                            }`}
                         >
                           {task.title}
                         </p>
